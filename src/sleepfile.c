@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <math.h>
 
-#include "sleepfile.h"
+#include "sleepfile/sleepfile.h"
 
 static void
 sleepfile_resource_open(nanoresource_request_t *request);
@@ -57,6 +57,12 @@ sleepfile_new(
   return sleepfile;
 }
 
+static void
+write_header(sleepfile_t *sleepfile) {
+  if (nanoresource_active((nanoresource_t *) sleepfile) > 0) {
+  }
+}
+
 static int
 sleepfile_open_storage_read_request(
   ras_request_t *request,
@@ -72,6 +78,8 @@ sleepfile_open_storage_read_request(
   } else if (err > 0) {
     return req->callback(req, err);
   }
+
+  write_header(sleepfile);
 
   // @TODO - read header values from `void *value`
   return req->callback(req, 0);
@@ -123,15 +131,20 @@ sleepfile_close_storage_close_request(
   void *value,
   unsigned long int size
 ) {
-  sleepfile_t *sleepfile = (sleepfile_t *) request->storage->data;
   nanoresource_request_t *req = request->shared;
+  req->callback(req, err);
   return 0;
 }
 
 static void
 sleepfile_resource_close(nanoresource_request_t *request) {
   sleepfile_t *sleepfile = (sleepfile_t *) request->resource;
-  request->callback(request, 0);
+
+  ras_storage_open_shared(
+    sleepfile->storage,
+    0, // noop callback
+    sleepfile_close_storage_close_request,
+    request);
 }
 
 int
@@ -223,12 +236,6 @@ sleepfile_get(
     0, // noop callback
     sleepfile_get_storage_open_request,
     options);
-}
-
-static void
-write_header(sleepfile_t *sleepfile) {
-  if (nanoresource_active((nanoresource_t *) sleepfile) > 0) {
-  }
 }
 
 static int
@@ -402,7 +409,6 @@ sleepfile_destroy_storage_destroy_request(
   void *value,
   unsigned long int size
 ) {
-  sleepfile_t *sleepfile = (sleepfile_t *) request->storage->data;
   nanoresource_request_t *req = request->shared;
   req->callback(req, err);
   return 0;

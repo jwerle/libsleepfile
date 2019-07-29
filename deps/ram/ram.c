@@ -1,10 +1,11 @@
 #include <ras/ras.h>
 #include <assert.h>
+#include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <math.h>
 
-#include "ram.h"
+#include "ram/ram.h"
 
 static unsigned char *
 ram_page(ram_t *ram, unsigned int i, unsigned int upsert) {
@@ -54,6 +55,7 @@ ram_request_read(ras_request_t *request) {
     unsigned int end = avail < want ? avail : want;
 
     if (0 != page) {
+      // printf("read(i=%d, rel=%d, start=%d, end=%d)\n", i, rel, start, end);
       memcpy(request->data + start, page + rel, end);
     }
 
@@ -107,21 +109,20 @@ ram_request_del(ras_request_t *request) {
 
   while (start < request->size) {
     if (0 == rel && request->size - start >= ram->page_size) {
-        ras_free(ram->buffers[i]);
-        ram->buffers[i++] = 0;
+      ras_free(ram->buffers[i]);
+      ram->buffers[i++] = 0;
     } else {
-      if (0 != ram->buffers[i]) {
-        unsigned char *page = ram->buffers[i++];
-        unsigned int avail = ram->page_size - rel;
-        unsigned int end = avail < (request->size - start)
-          ? start + avail
-          : request->size;
-        memset(page + rel, 0, rel + end);
-      }
+      unsigned char *page = ram_page(ram, i++, 0);
+      unsigned int avail = ram->page_size - rel;
+      unsigned int end = avail < (request->size - start)
+        ? start + avail
+        : request->size;
+      // printf("delete(i=%d, rel=%d, start=%d, end=%d)\n", i, rel, start, end);
+      memset(page + rel, 0, end - start);
     }
 
+    start += ram->page_size - rel;
     rel = 0;
-    start += ram->page_size;
   }
 
   if (request->offset + request->size >= ram->length) {
@@ -135,7 +136,7 @@ static void
 ram_request_destroy(ras_request_t *request) {
   ram_t *ram = (ram_t *) request->storage;
 
-  for (int i = 0; i < SLEEPFILE_RAM_MAX_BUFFERS; ++i) {
+  for (int i = 0; i < RAM_MAX_BUFFERS; ++i) {
     if (0 != ram && 0 != ram->buffers[i]) {
       ras_free(ram->buffers[i]);
       ram->buffers[i] = 0;
@@ -227,6 +228,7 @@ ram_new() {
     });
 
   ram->alloc = 1;
-  ram->page_size = 1024 * 1024; // 1MB page size
+  ram->page_size = 1024 * 1024; // 1mb page size
+  //ram->page_size = 8; // smallest page size
   return (ras_storage_t *) ram;
 }

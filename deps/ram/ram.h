@@ -1,10 +1,13 @@
-#ifndef SLEEPFILE_RAM_H
-#define SLEEPFILE_RAM_H
+#ifndef RAM_H
+#define RAM_H
 
 #include <ras/ras.h>
 
-#ifndef SLEEPFILE_RAM_MAX_BUFFERS
-#define SLEEPFILE_RAM_MAX_BUFFERS 1024
+#include "platform.h"
+#include "version.h"
+
+#ifndef RAM_MAX_BUFFERS
+#define RAM_MAX_BUFFERS 1024
 #endif
 
 typedef struct ram_s ram_t;
@@ -12,20 +15,20 @@ struct ram_s {
   RAS_STORAGE_FIELDS;
   unsigned long int length;
   unsigned int page_size;
-  unsigned char *buffers[SLEEPFILE_RAM_MAX_BUFFERS];
+  unsigned char *buffers[RAM_MAX_BUFFERS];
 };
 
-int
+RAM_EXPORT int
 ram_destroy(
   ras_storage_t *ram,
   ras_storage_destroy_callback_t *callback);
 
-int
+RAM_EXPORT int
 ram_stat(
   ras_storage_t *ram,
   ras_storage_stat_callback_t *callback);
 
-int
+RAM_EXPORT int
 ram_delete(
   ras_storage_t *ram,
   unsigned long int offset,
@@ -33,7 +36,7 @@ ram_delete(
   ras_storage_delete_callback_t *callback
 );
 
-int
+RAM_EXPORT int
 ram_read(
   ras_storage_t *ram,
   unsigned long int offset,
@@ -41,7 +44,7 @@ ram_read(
   ras_storage_read_callback_t *callback
 );
 
-int
+RAM_EXPORT int
 ram_write(
   ras_storage_t *ram,
   unsigned long int offset,
@@ -50,10 +53,10 @@ ram_write(
   ras_storage_write_callback_t *callback
 );
 
-ram_t *
+RAM_EXPORT ram_t *
 ram_alloc();
 
-ras_storage_t *
+RAM_EXPORT ras_storage_t *
 ram_new();
 
 #endif
