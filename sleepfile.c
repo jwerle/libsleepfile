@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <math.h>
 
 #include "sleepfile.h"
 
@@ -34,6 +35,7 @@ sleepfile_new(
   sleepfile->magic_bytes = options.magic_bytes;
   sleepfile->value_codec = options.value_codec;
   sleepfile->value_size = options.value_size;
+  sleepfile->version = 0;
   sleepfile->storage = storage;
   sleepfile->name = options.name;
 
@@ -221,7 +223,6 @@ sleepfile_get(
     0, // noop callback
     sleepfile_get_storage_open_request,
     options);
- return 0;
 }
 
 static void
@@ -321,10 +322,76 @@ sleepfile_put(
     options);
 }
 
+static int
+sleepfile_stat_storage_stat_request(
+  ras_request_t *request,
+  int err,
+  void *value,
+  unsigned long int size
+) {
+  sleepfile_t *sleepfile = request->storage->data;
+  sleepfile_stat_options_t *options = request->shared;
+  sleepfile_stat_callback_t *callback = 0;
+  sleepfile_stats_t stats = { 0 };
+
+  if (0 == err) {
+    sleepfile_storage_stats_t *stat = malloc(sizeof(*stat));
+
+    memset(stat, 0, sizeof(*stat));
+    memcpy(stat, value, size);
+
+    stats.magic_bytes = sleepfile->magic_bytes;
+    stats.value_size = sleepfile->value_size;
+    stats.version = sleepfile->version;
+    stats.name = sleepfile->name;
+
+    stats.length = (unsigned long int) fmax(0.0,
+      floorf((stat->size - 32) / sleepfile->value_size));
+
+    if (stat->blocks >  0) {
+      stats.density = (stat->blocks / 8.0) / ceil(stat->size/ 4096);
+    } else {
+      stats.density = 1;
+    }
+
+    free(stat);
+  }
+
+  if (0 != options) {
+    callback = options->callback;
+    request->shared = 0;
+    free(options);
+    options = 0;
+  }
+
+  nanoresource_inactive((nanoresource_t *) sleepfile);
+
+  if (0 != callback) {
+    callback(sleepfile, err, &stats);
+  }
+
+  return 0;
+}
+
 int
 sleepfile_stat(
-  sleepfile_t *sleepfile
+  sleepfile_t *sleepfile,
+  sleepfile_stat_callback_t *callback
 ) {
+  int err = 0;
+
+  if ((err = nanoresource_active((nanoresource_t *) sleepfile)) > 0) {
+    return err;
+  }
+
+  sleepfile_stat_options_t *options = malloc(sizeof(*options));
+  *options = (sleepfile_stat_options_t) { callback };
+
+  return ras_storage_stat_shared(
+    sleepfile->storage,
+    0, // noop callback
+    sleepfile_stat_storage_stat_request,
+    options);
   return 0;
 }
 

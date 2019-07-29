@@ -6,9 +6,13 @@
 
 typedef struct sleepfile sleepfile_t;
 typedef struct sleepfile_codec sleepfile_codec_t;
+typedef struct sleepfile_stats sleepfile_stats_t;
 typedef struct sleepfile_options sleepfile_options_t;
+typedef struct sleepfile_storage_stats sleepfile_storage_stats_t;
+
 typedef struct sleepfile_get_options sleepfile_get_options_t;
 typedef struct sleepfile_put_options sleepfile_put_options_t;
+typedef struct sleepfile_stat_options sleepfile_stat_options_t;
 
 typedef void (sleepfile_open_callback_t)(sleepfile_t *sleepfile, int err);
 typedef void (sleepfile_close_callback_t)(sleepfile_t *sleepfile, int err);
@@ -20,9 +24,10 @@ typedef void (sleepfile_get_callback_t)(
   int err,
   void *value);
 
-enum sleepfile_event {
-  SLEEPFILE_EVENT_HEADER = 0xA + 0
-};
+typedef void (sleepfile_stat_callback_t)(
+  sleepfile_t *sleepfile,
+  int err,
+  sleepfile_stats_t *stats);
 
 struct sleepfile_codec {
   void *(*encode)(void *value, unsigned long int size);
@@ -43,9 +48,28 @@ struct sleepfile {
   sleepfile_codec_t value_codec;
   unsigned long int value_size;
   unsigned long int magic_bytes;
+  unsigned long int version;
   char *name;
   unsigned int readable:1;
   unsigned int writable:1;
+};
+
+struct sleepfile_stats {
+  unsigned long int value_size;
+  unsigned long int magic_bytes;
+  unsigned long int version;
+  unsigned long int length;
+  long double density;
+  char *name;
+};
+
+struct sleepfile_storage_stats {
+  RAS_STORAGE_STATS_FIELDS;
+  unsigned long int blocks;
+};
+
+struct sleepfile_stat_options {
+  sleepfile_stat_callback_t *callback;
 };
 
 struct sleepfile_get_options {
@@ -82,7 +106,8 @@ sleepfile_close(
 
 int
 sleepfile_stat(
-  sleepfile_t *sleepfile);
+  sleepfile_t *sleepfile,
+  sleepfile_stat_callback_t *callback);
 
 int
 sleepfile_get(

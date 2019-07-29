@@ -31,7 +31,7 @@ ram_request_stat(ras_request_t *request) {
   ram_t *ram = (ram_t *) request->storage;
   stats.size = ram->length;
 
-  request->callback(request, 0, &stats, 0);
+  request->callback(request, 0, &stats, sizeof(ras_storage_stats_t));
 }
 
 static void

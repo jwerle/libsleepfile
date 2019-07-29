@@ -13,25 +13,52 @@ ondestroy(sleepfile_t *sleepfile, int err) {
 }
 
 static void
+onstat(sleepfile_t *sleepfile, int err, sleepfile_stats_t *stats) {
+  printf("onstat(err=%s)\n", strerror(err));
+
+  if (0 == err) {
+    printf(
+    "Stats {\n"
+    "  value_size=%lu\n"
+    "  magic_bytes=0x%0.8lx\n"
+    "  version=%lu\n"
+    "  length=%lu\n"
+    "  density=%LG\n"
+    "  name=%s\n"
+    "}\n",
+    stats->value_size,
+    stats->magic_bytes,
+    stats->version,
+    stats->length,
+    stats->density,
+    stats->name);
+  }
+
+  sleepfile_destroy(sleepfile, ondestroy);
+}
+
+static void
 onget(sleepfile_t *sleepfile, int err, void *value) {
   printf("onget(err=%s)\n", strerror(err));
+
   if (0 == err) {
     printf("%s\n", value);
   }
-  sleepfile_destroy(sleepfile, ondestroy);
+
+  sleepfile_stat(sleepfile, onstat);
 }
 
 static void
 onput(sleepfile_t *sleepfile, int err) {
   printf("onput(err=%s)\n", strerror(err));
-  sleepfile_get(sleepfile, 1, onget);
+  sleepfile_get(sleepfile, 10, onget);
 }
 
 static void
 onopen(sleepfile_t *sleepfile, int err) {
   printf("onopen(err=%s)\n", strerror(err));
   char *buffer = "hello";
-  sleepfile_put(sleepfile, 1, buffer, onput);
+  sleepfile_put(sleepfile, 10, buffer, onput);
 }
 
 static void *
@@ -59,9 +86,11 @@ main(void) {
   ras_storage_t *ram = ram_new();
   sleepfile_t *sleepfile = sleepfile_new(ram,
     (sleepfile_options_t) {
-      .magic_bytes = 0x44448888,
+      // [bitfield]=0x05025700, Ed25519=0x05025701, BLAKE2b=0x05025702
+      .magic_bytes = 0x05025701,
       .value_codec = (sleepfile_codec_t) { encode, decode },
-      .value_size = 32
+      .value_size = 64,
+      .name = "Ed25519"
     });
 
   sleepfile_open(sleepfile, onopen);
