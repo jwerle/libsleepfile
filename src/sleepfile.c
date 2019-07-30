@@ -37,12 +37,17 @@ sleepfile_new(
   sleepfile->value_size = options.value_size;
   sleepfile->version = 0;
   sleepfile->storage = storage;
-  sleepfile->name = options.name;
 
   sleepfile->readable = 0;
   sleepfile->writable = 0;
 
   storage->data = sleepfile;
+
+  memset(sleepfile->name,0, sizeof(sleepfile->name));
+
+  if (0 != options.name) {
+    memcpy(sleepfile->name, options.name, sizeof(sleepfile->name));
+  }
 
   nanoresource_init((nanoresource_t *) sleepfile,
     (nanoresource_options_t) {
@@ -57,10 +62,69 @@ sleepfile_new(
   return sleepfile;
 }
 
+/**
 static void
 write_header(sleepfile_t *sleepfile) {
   if (nanoresource_active((nanoresource_t *) sleepfile) > 0) {
+    return;
   }
+
+  printf("write_header\n");
+}
+*/
+
+static void
+parse_header(
+  sleepfile_t *sleepfile,
+  void *value,
+  ras_request_t *request
+) {
+  nanoresource_request_t *req = request->shared;
+  unsigned char *buffer = value;
+  int magic_bytes =
+      ((buffer[0] & 0xff) << 24)
+    | ((buffer[1] & 0xff) << 16)
+    | ((buffer[2] & 0xff) << 8)
+    | ((buffer[3] & 0xff) << 0);
+
+  int value_size =
+      ((buffer[5] & 0xff) << 8)
+    | ((buffer[6] & 0xff) << 0);
+
+  if (0 != sleepfile->magic_bytes && magic_bytes != sleepfile->magic_bytes) {
+    // @TODO use real error
+    req->callback(req, -1);
+    return;
+  }
+
+  if ((unsigned int) 0 != buffer[4]) {
+    // @TODO use real error
+    req->callback(req, -1);
+    return;
+  }
+
+  if (0 != sleepfile->value_size && value_size != sleepfile->value_size) {
+    // @TODO use real error
+    req->callback(req, -1);
+    return;
+  }
+
+  char name[buffer[7]];
+  memset(name, 0, buffer[7]);
+  memcpy(name, buffer + 8, buffer[7]);
+
+  if (0 != strncmp(name, sleepfile->name, buffer[7])) {
+    // @TODO use real error
+    req->callback(req, -1);
+    return;
+  }
+
+  sleepfile->magic_bytes = magic_bytes;
+  sleepfile->value_size = value_size;
+  sleepfile->writable = 1;
+  memcpy(sleepfile->name, name, buffer[7]);
+
+  req->callback(req, 0);
 }
 
 static int
@@ -79,10 +143,10 @@ sleepfile_open_storage_read_request(
     return req->callback(req, err);
   }
 
-  write_header(sleepfile);
+  sleepfile->readable = 1;
 
-  // @TODO - read header values from `void *value`
-  return req->callback(req, 0);
+  parse_header(sleepfile, value, request);
+  return 0;
 }
 
 static int
@@ -169,10 +233,12 @@ sleepfile_get_storage_read_request(
   sleepfile_get_callback_t *callback = 0;
   unsigned int index = 0;
   void *enc = 0;
+  void *ctx = 0;
 
   if (0 != options) {
     callback = options->callback;
     index = options->index;
+    ctx = options->ctx;
     request->shared = 0;
     free(options);
     options = 0;
@@ -189,7 +255,7 @@ sleepfile_get_storage_read_request(
   nanoresource_inactive((nanoresource_t *) sleepfile);
 
   if (0 != callback) {
-    callback(sleepfile, err, 0 != enc ? enc : value);
+    callback(sleepfile, err, 0 != enc ? enc : value, ctx);
   }
 
   if (0 != enc) {
@@ -223,16 +289,23 @@ int
 sleepfile_get(
   sleepfile_t *sleepfile,
   unsigned int index,
-  sleepfile_get_callback_t *callback
+  sleepfile_get_callback_t *callback,
+  void *ctx
 ) {
   int err = 0;
+
+  if (1 != sleepfile->opened) {
+    if ((err = sleepfile_open(sleepfile, 0) > 0)) {
+      return err;
+    }
+  }
 
   if ((err = nanoresource_active((nanoresource_t *) sleepfile)) > 0) {
     return err;
   }
 
   sleepfile_get_options_t *options = malloc(sizeof(*options));
-  *options = (sleepfile_get_options_t) { index, callback };
+  *options = (sleepfile_get_options_t) { index, callback, ctx };
 
   return ras_storage_open_shared(
     sleepfile->storage,
@@ -251,6 +324,7 @@ sleepfile_put_storage_write_request(
   sleepfile_t *sleepfile = request->storage->data;
   sleepfile_put_options_t *options = request->shared;
   sleepfile_put_callback_t *callback = 0;
+  void *ctx = 0;
 
   if (0 == options) {
     return 1;
@@ -258,6 +332,7 @@ sleepfile_put_storage_write_request(
 
   if (0 != options) {
     callback = options->callback;
+    ctx = options->ctx;
     request->shared = 0;
 
     if (0 != sleepfile->value_codec.encode && 1 == options->encoded) {
@@ -271,7 +346,7 @@ sleepfile_put_storage_write_request(
   nanoresource_inactive((nanoresource_t *) sleepfile);
 
   if (0 != callback) {
-    callback(sleepfile, err);
+    callback(sleepfile, err, ctx);
   }
 
   return 0;
@@ -315,16 +390,23 @@ sleepfile_put(
   sleepfile_t *sleepfile,
   unsigned int index,
   void *value,
-  sleepfile_put_callback_t *callback
+  sleepfile_put_callback_t *callback,
+  void *ctx
 ) {
   int err = 0;
+
+  if (1 != sleepfile->opened) {
+    if ((err = sleepfile_open(sleepfile, 0) > 0)) {
+      return err;
+    }
+  }
 
   if ((err = nanoresource_active((nanoresource_t *) sleepfile)) > 0) {
     return err;
   }
 
   sleepfile_put_options_t *options = malloc(sizeof(*options));
-  *options = (sleepfile_put_options_t) { index, value, callback };
+  *options = (sleepfile_put_options_t) { index, value, callback, 0, ctx };
 
   return ras_storage_open_shared(
     sleepfile->storage,
@@ -344,6 +426,7 @@ sleepfile_stat_storage_stat_request(
   sleepfile_stat_options_t *options = request->shared;
   sleepfile_stat_callback_t *callback = 0;
   sleepfile_stats_t stats = { 0 };
+  void *ctx = 0;
 
   if (0 == err) {
     sleepfile_storage_stats_t *stat = malloc(sizeof(*stat));
@@ -370,6 +453,7 @@ sleepfile_stat_storage_stat_request(
 
   if (0 != options) {
     callback = options->callback;
+    ctx = options->ctx;
     request->shared = 0;
     free(options);
     options = 0;
@@ -378,7 +462,7 @@ sleepfile_stat_storage_stat_request(
   nanoresource_inactive((nanoresource_t *) sleepfile);
 
   if (0 != callback) {
-    callback(sleepfile, err, &stats);
+    callback(sleepfile, err, &stats, ctx);
   }
 
   return 0;
@@ -387,7 +471,8 @@ sleepfile_stat_storage_stat_request(
 int
 sleepfile_stat(
   sleepfile_t *sleepfile,
-  sleepfile_stat_callback_t *callback
+  sleepfile_stat_callback_t *callback,
+  void *ctx
 ) {
   int err = 0;
 
@@ -396,7 +481,7 @@ sleepfile_stat(
   }
 
   sleepfile_stat_options_t *options = malloc(sizeof(*options));
-  *options = (sleepfile_stat_options_t) { callback };
+  *options = (sleepfile_stat_options_t) { callback, ctx };
 
   return ras_storage_stat_shared(
     sleepfile->storage,

@@ -1,4 +1,5 @@
 #include <sleepfile/sleepfile.h>
+#include <flat-tree/flat-tree.h>
 #include <ram/ram.h>
 #include <string.h>
 #include <stdlib.h>
@@ -9,6 +10,22 @@
 
 typedef struct hypercore hypercore_t;
 typedef struct hypercore_node hypercore_node_t;
+typedef struct hypercore_get_ctx hypercore_get_ctx_t;
+typedef struct hypercore_data_offset_ctx hypercore_data_offset_ctx_t;
+
+typedef void (hypercore_data_offset_callback_t)(
+  hypercore_t *feed,
+  int err,
+  unsigned long int offset,
+  unsigned long int size,
+  void *ctx);
+
+typedef void (hypercore_get_callback_t)(
+  hypercore_t *feed,
+  int err,
+  void *value,
+  unsigned long int size,
+  void *ctx);
 
 struct hypercore {
   struct {
@@ -29,6 +46,25 @@ struct hypercore_node {
   unsigned char hash[32];
 };
 
+struct hypercore_data_offset_ctx {
+  hypercore_t *feed;
+  hypercore_data_offset_callback_t *callback;
+  void *shared;
+  unsigned long long *roots;
+  unsigned long int blk;
+  unsigned long int index;
+  unsigned long int offset;
+  unsigned long int size;
+  unsigned long int pending;
+};
+
+struct hypercore_get_ctx {
+  hypercore_t *feed;
+  hypercore_get_callback_t *callback;
+  void *shared;
+  unsigned long int index;
+};
+
 void *
 decode_node(
   void *value,
@@ -45,25 +81,29 @@ decode_node(
 
   node->index = index;
 
-  int top =
-    ((buffer[32 + 0] & 0xff) << 0)
-  | ((buffer[32 + 1] & 0xff) << 8)
-  | ((buffer[32 + 2] & 0xff) << 16)
-  | ((buffer[32 + 3] & 0xff) << 24);
+  // decode 32 bit big-endian size value from the
+  // last 8 bytes of the 40 byte node buffer
+  {
+    const int top =
+        ((buffer[32 + 0] & 0xff) << 0)
+      | ((buffer[32 + 1] & 0xff) << 8)
+      | ((buffer[32 + 2] & 0xff) << 16)
+      | ((buffer[32 + 3] & 0xff) << 24);
 
-  int rem =
-    ((buffer[32 + 4] & 0xff) * (int) pow(2, 24))
-  | ((buffer[32 + 5] & 0xff) * (int) pow(2, 16))
-  | ((buffer[32 + 6] & 0xff) * (int) pow(2, 8))
-  | ((buffer[32 + 7] & 0xff));
+    const int rem =
+        ((buffer[32 + 4] & 0xff) * (int) pow(2, 24))
+      | ((buffer[32 + 5] & 0xff) * (int) pow(2, 16))
+      | ((buffer[32 + 6] & 0xff) * (int) pow(2, 8))
+      | ((buffer[32 + 7] & 0xff));
 
-  node->size = top * UINT_32_MAX + rem;
+    node->size = top * UINT_32_MAX + rem;
+  }
 
   return node;
 }
 
 void
-onnode(sleepfile_t *sleepfile, int err, void *value) {
+onnode(sleepfile_t *sleepfile, int err, void *value, void *ctx) {
   hypercore_node_t *node = value;
   char hash_string[64 + 32];
 
@@ -74,6 +114,7 @@ onnode(sleepfile_t *sleepfile, int err, void *value) {
     }
   }
 
+  printf("\n");
   printf(
     "Node {\n"
     "  index=%lu\n"
@@ -82,8 +123,163 @@ onnode(sleepfile_t *sleepfile, int err, void *value) {
     "}\n",
     node->index,
     node->size,
-    hash_string
-  );
+    hash_string);
+  printf("\n");
+}
+
+void
+onsignature(sleepfile_t *sleepfile, int err, void *value, void *ctx) {
+  unsigned char *signature = value;
+  char signature_string[128+ 64];
+
+  for (int i = 0, j = 0; i < 32; ++i, j+=3) {
+    sprintf(signature_string + j, "%0.2x", signature[i] & 0xff);
+    if (i + 1 != 32) {
+      sprintf(signature_string + j + 2, "  ");
+    }
+  }
+
+  printf("Signature {%s}\n", signature_string);
+}
+
+void
+onget(
+  hypercore_t *feed,
+  int err,
+  void *value,
+  unsigned long int size,
+  void *ctx
+) {
+  printf("onget(err=%s)\n", strerror(err));
+  if (0 == err) {
+    printf("from hypercore: %s\n", (char *) value);
+  }
+}
+
+void
+hypercore_data_offset_root_get_last(
+  sleepfile_t *sleepfile,
+  int err,
+  void *value,
+  void *ptr
+) {
+  printf("on last root get: err=%s\n", strerror(err));
+
+  hypercore_data_offset_ctx_t *ctx = ptr;
+  hypercore_node_t *node = value;
+  ctx->size = node->size;
+  ctx->callback(ctx->feed, err, ctx->offset, ctx->size, ctx->shared);
+  free(ctx->roots);
+  free(ctx);
+  ctx = 0;
+}
+
+void
+hypercore_data_offset_root_get(
+  sleepfile_t *sleepfile,
+  int err,
+  void *value,
+  void *ptr
+) {
+  printf("on root get: err=%s\n", strerror(err));
+  hypercore_data_offset_ctx_t *ctx = ptr;
+
+  if (0 != value) {
+    hypercore_node_t *node = value;
+    ctx->offset += node->size;
+  }
+
+  if (--ctx->pending > 0) {
+    return;
+  }
+
+  sleepfile_get(
+    ctx->feed->sleep.tree,
+    ctx->blk,
+    hypercore_data_offset_root_get_last,
+    ctx);
+}
+
+void
+hypercore_data_offset(
+  hypercore_t *feed,
+  unsigned long int index,
+  hypercore_data_offset_callback_t *callback,
+  void *shared
+) {
+  unsigned long long *roots = 0;
+  unsigned long long pending = ft_full_roots(&roots, 2 * index);
+  hypercore_data_offset_ctx_t *ctx = malloc(sizeof(*ctx));
+  memset(ctx, 0, sizeof(*ctx));
+
+  ctx->callback = callback;
+  ctx->pending = pending;
+  ctx->shared = shared;
+  ctx->offset = 0;
+  ctx->roots = roots;
+  ctx->index = index;
+  ctx->feed = feed;
+  ctx->blk = 2 * index;
+
+  printf("pending=%llu\n", pending);
+
+  if (0 == pending) {
+    ctx->pending = 1;
+    hypercore_data_offset_root_get(feed->sleep.tree, 0, 0, ctx);
+    return;
+  }
+
+  for (int i = 0; i < pending; ++i) {
+    sleepfile_get(
+      feed->sleep.tree,
+      roots[i],
+      hypercore_data_offset_root_get,
+      ctx);
+  }
+}
+
+int
+hypercore_get_data(
+  ras_request_t *request,
+  int err,
+  void *value,
+  unsigned long int size
+) {
+  hypercore_get_ctx_t *ctx = request->shared;
+  ctx->callback(ctx->feed, err, value, size, ctx->shared);
+  free(ctx);
+  return 0;
+}
+
+void
+hypercore_get_offset(
+  hypercore_t *feed,
+  int err,
+  unsigned long int offset,
+  unsigned long int size,
+  void *ctx
+) {
+  printf("offset=%lu size=%lu\n", offset, size);
+  ras_storage_read_shared(
+    feed->storage.data,
+    offset,
+    size,
+    0,
+    hypercore_get_data,
+    ctx);
+}
+
+void
+hypercore_get(
+  hypercore_t *feed,
+  unsigned long int index,
+  hypercore_get_callback_t *callback,
+  void *shared
+) {
+  hypercore_get_ctx_t *ctx = malloc(sizeof(*ctx));
+  ctx->callback = callback;
+  ctx->shared = shared;
+  hypercore_data_offset(feed, index, hypercore_get_offset, ctx);
 }
 
 int
@@ -130,20 +326,28 @@ main(void) {
 
   feed.sleep.signatures = sleepfile_new(feed.storage.signatures,
     (sleepfile_options_t) {
-      .magic_bytes = 0x05025701,
-      .value_size = 64,
+      //.magic_bytes = 0x05025701,
+      //.value_size = 64,
       .name = "Ed25519"
     });
 
   feed.sleep.tree = sleepfile_new(feed.storage.tree,
     (sleepfile_options_t) {
-      .magic_bytes = 0x05025702,
+      //.magic_bytes = 0x05025702,
       .value_codec = (sleepfile_codec_t) { 0, decode_node },
-      .value_size = 40,
+      //.value_size = 40,
       .name = "BLAKE2b"
     });
 
-  sleepfile_get(feed.sleep.tree, 0, onnode);
+  sleepfile_get(feed.sleep.tree, 0, onnode, 0);
+  sleepfile_get(feed.sleep.signatures, 0, onsignature, 0);
+
+  hypercore_get(&feed, 0, onget, 0);
+
+  sleepfile_destroy(feed.sleep.tree, 0);
+  sleepfile_destroy(feed.sleep.signatures, 0);
+
+  ram_destroy(feed.storage.data, 0);
 
   return 0;
 }

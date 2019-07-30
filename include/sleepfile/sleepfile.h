@@ -21,16 +21,22 @@ typedef void (sleepfile_open_callback_t)(sleepfile_t *sleepfile, int err);
 typedef void (sleepfile_close_callback_t)(sleepfile_t *sleepfile, int err);
 typedef void (sleepfile_destroy_callback_t)(sleepfile_t *sleepfile, int err);
 
-typedef void (sleepfile_put_callback_t)(sleepfile_t *sleepfile, int err);
+typedef void (sleepfile_put_callback_t)(
+  sleepfile_t *sleepfile,
+  int err,
+  void *ctx);
+
 typedef void (sleepfile_get_callback_t)(
   sleepfile_t *sleepfile,
   int err,
-  void *value);
+  void *value,
+  void *ctx);
 
 typedef void (sleepfile_stat_callback_t)(
   sleepfile_t *sleepfile,
   int err,
-  sleepfile_stats_t *stats);
+  sleepfile_stats_t *stats,
+  void *ctx);
 
 struct sleepfile_codec {
   void *(*encode)(
@@ -59,9 +65,9 @@ struct sleepfile {
   unsigned long int value_size;
   unsigned long int magic_bytes;
   unsigned long int version;
-  char *name;
   unsigned int readable:1;
   unsigned int writable:1;
+  char name[32 - 7];
 };
 
 struct sleepfile_stats {
@@ -80,11 +86,13 @@ struct sleepfile_storage_stats {
 
 struct sleepfile_stat_options {
   sleepfile_stat_callback_t *callback;
+  void *ctx;
 };
 
 struct sleepfile_get_options {
   unsigned int index;
   sleepfile_get_callback_t *callback;
+  void *ctx;
 };
 
 struct sleepfile_put_options {
@@ -92,6 +100,7 @@ struct sleepfile_put_options {
   void *value;
   sleepfile_put_callback_t *callback;
   unsigned int encoded:1;
+  void *ctx;
 };
 
 SLEEPFILE_EXPORT sleepfile_t *
@@ -117,19 +126,22 @@ sleepfile_close(
 SLEEPFILE_EXPORT int
 sleepfile_stat(
   sleepfile_t *sleepfile,
-  sleepfile_stat_callback_t *callback);
+  sleepfile_stat_callback_t *callback,
+  void *ctx);
 
 SLEEPFILE_EXPORT int
 sleepfile_get(
   sleepfile_t *sleepfile,
   unsigned int index,
-  sleepfile_get_callback_t *callback);
+  sleepfile_get_callback_t *callback,
+  void *ctx);
 
 SLEEPFILE_EXPORT int
 sleepfile_put(
   sleepfile_t *sleepfile,
   unsigned int index,
   void *value,
-  sleepfile_put_callback_t *callback);
+  sleepfile_put_callback_t *callback,
+  void *ctx);
 
 #endif
