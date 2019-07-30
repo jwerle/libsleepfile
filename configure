@@ -57,6 +57,8 @@ declare -a OPTIONAL_LIBRARY_DEPENDENCIES=()
 
 ## Source dependency files
 declare -a DEPS=(
+  deps/nanoresource/*.c
+  deps/ras/*.c
 )
 
 ## Source files

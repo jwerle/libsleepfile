@@ -152,8 +152,8 @@ onget(
 ) {
   printf("onget(err=%s) %lu\n", strerror(err), size);
   if (0 == err && 0 != value) {
-    char buffer[size];
-    memset(buffer, 0, size);
+    char buffer[size + 1];
+    memset(buffer, 0, size + 1);
     memcpy(buffer, value, size);
     printf("from hypercore: %s\n", buffer);
   }
