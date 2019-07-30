@@ -49,7 +49,7 @@ declare -a OPTIONAL_COMMAND_DEPENDENCIES=()
 ## Required system libraries
 declare -a LIBRARY_DEPENDENCIES=( )
 
-## Required system fsleepfileeworks on macos
+## Required system frameworks on macos
 declare -a LIBRARY_FSLEEPFILEEWORK_DEPENDENCIES=()
 
 ## Optional system libraries
@@ -234,7 +234,7 @@ function dots {
 function check_posix_memalign {
   local function_name='posix_memalign'
   local headers='stdlib.h assert.h'
-  local progsleepfile="$(cat <<-SRC
+  local program="$(cat <<-SRC
   int main() {
     void *ptr = 0;
     assert(posix_memalign(&ptr, 8, 32));
@@ -242,14 +242,14 @@ function check_posix_memalign {
   }
 SRC
 )"
-  check_c_progsleepfile "$function_name" "$headers" "$progsleepfile"
+  check_c_program "$function_name" "$headers" "$program"
   return $?
 }
 
 function check_memalign {
   local function_name='memalign'
   local headers='stdlib.h malloc.h assert.h'
-  local progsleepfile="$(cat <<-SRC
+  local program="$(cat <<-SRC
   int main() {
     void *ptr = memalign(8, 32);
     assert(ptr);
@@ -257,22 +257,22 @@ function check_memalign {
   }
 SRC
 )"
-  check_c_progsleepfile "$function_name" "$headers" "$progsleepfile"
+  check_c_program "$function_name" "$headers" "$program"
   return $?
 }
 
-function check_c_progsleepfile {
+function check_c_program {
   let local rc=0
   local function_name="$1"
   declare -a local headers=($2)
-  local progsleepfile="$3"
+  local program="$3"
   printf "Checking for $function_name"
   dots $(expr $DOTWIDTH - ${#function_name} + 1)
   {
     for header in "${headers[@]}"; do
       echo "#include <$header>"
     done
-    echo $progsleepfile
+    echo $program
   } | ${CC} -o /dev/null -xc - > /dev/null 2>&1
   if (( $? != 0 )); then
     no; rc=1
@@ -303,15 +303,15 @@ function check_library {
 }
 
 ##
-# Check for the existence of a fsleepfileework
+# Check for the existence of a framework
 # with human readable output
-function check_fsleepfileework {
+function check_framework {
   let local rc=0
-  local fsleepfileework="$1"
-  if [ -z "$fsleepfileework" ]; then return 1; fi
-  printf "Checking for fsleepfileework $fsleepfileework " && dots $(expr $DOTWIDTH - ${#fsleepfileework} - 10)
+  local framework="$1"
+  if [ -z "$framework" ]; then return 1; fi
+  printf "Checking for framework $framework " && dots $(expr $DOTWIDTH - ${#framework} - 10)
   echo 'int main (void) { return (0); }' | \
-    ${CC} -o /dev/null -fsleepfileework $fsleepfileework -xc - > /dev/null 2>&1
+    ${CC} -o /dev/null -framework $framework -xc - > /dev/null 2>&1
   if (( $? != 0 )); then
     no; rc=1
   else
@@ -427,9 +427,9 @@ function configure {
     ldflag "-l $lib"
   done
 
-  ## gcc/ld fsleepfileework (macOS) flags
-  for fsleepfileework in "${LIBRARY_FSLEEPFILEEWORK_DEPENDENCIES[@]}"; do
-    ldflag "-fsleepfileework $fsleepfileework"
+  ## gcc/ld framework (macOS) flags
+  for framework in "${LIBRARY_FSLEEPFILEEWORK_DEPENDENCIES[@]}"; do
+    ldflag "-framework $framework"
   done
 
   if (( ${#COMMAND_DEPENDENCIES[@]} > 0 )); then
@@ -467,11 +467,11 @@ function configure {
 
   if (( ${#LIBRARY_FSLEEPFILEEWORK_DEPENDENCIES[@]} > 0 )); then
     echo
-    info "Checking required fsleepfileework dependencies"
+    info "Checking required framework dependencies"
     for (( i = 0; i < ${#LIBRARY_FSLEEPFILEEWORK_DEPENDENCIES[@]}; i++ )); do
-      local fsleepfileework="${LIBRARY_FSLEEPFILEEWORK_DEPENDENCIES[$i]}"
-      if ! check_fsleepfileework $fsleepfileework; then
-        fatal "Missing required fsleepfileework $fsleepfileework"
+      local framework="${LIBRARY_FSLEEPFILEEWORK_DEPENDENCIES[$i]}"
+      if ! check_framework $framework; then
+        fatal "Missing required framework $framework"
       fi
     done
   fi
