@@ -85,10 +85,10 @@ decode_node(
   // last 8 bytes of the 40 byte node buffer
   {
     const int top =
-        ((buffer[32 + 0] & 0xff) << 0)
-      | ((buffer[32 + 1] & 0xff) << 8)
-      | ((buffer[32 + 2] & 0xff) << 16)
-      | ((buffer[32 + 3] & 0xff) << 24);
+        ((buffer[32 + 0] & 0xff) << 24)
+      | ((buffer[32 + 1] & 0xff) << 16)
+      | ((buffer[32 + 2] & 0xff) << 8)
+      | ((buffer[32 + 3] & 0xff) << 0);
 
     const int rem =
         ((buffer[32 + 4] & 0xff) * (int) pow(2, 24))
@@ -150,9 +150,12 @@ onget(
   unsigned long int size,
   void *ctx
 ) {
-  printf("onget(err=%s)\n", strerror(err));
-  if (0 == err) {
-    printf("from hypercore: %s\n", (char *) value);
+  printf("onget(err=%s) %lu\n", strerror(err), size);
+  if (0 == err && 0 != value) {
+    char buffer[size];
+    memset(buffer, 0, size);
+    memcpy(buffer, value, size);
+    printf("from hypercore: %s\n", buffer);
   }
 }
 
