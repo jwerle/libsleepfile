@@ -1,5 +1,5 @@
 {
-  "name": "sleepfile",
+  "name": "@jwerle/libsleepfile",
   "version": "0.0.0",
   "clib": true,
   "description": "A C99 library for interacting with SLEEP file storage.",
@@ -7,20 +7,8 @@
     "example": "example",
     "test": "test"
   },
-  "repo": "jwerle/libsleepfile",
-  "src": [
-    "include/sleepfile/platform.h",
-    "include/sleepfile/version.h",
-    "include/sleepfile/sleepfile.h",
-    "src/sleepfile.c",
-    "src/version.c",
-    "mk/brief.mk",
-    "Makefile.in",
-    "configure",
-    "README.md",
-    "LICENSE"
-  ],
   "scripts": {
+    "version": "./scripts/update-clib-json",
     "test": "make test"
   },
   "repository": {
