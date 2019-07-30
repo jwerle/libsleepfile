@@ -8,7 +8,7 @@
     "test": "test"
   },
   "scripts": {
-    "version": "./scripts/update-clib-json",
+    "version": "./scripts/update-clib-json && git add clib.json",
     "test": "make test"
   },
   "repository": {
