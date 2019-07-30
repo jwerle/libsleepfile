@@ -14,5 +14,13 @@
     "configure",
     "README.md",
     "LICENSE"
-  ]
+  ],
+  "dependencies": {
+    "jwerle/libnanoresource": "0.1.2",
+    "jwerle/libras": "0.3.7"
+  },
+  "development": {
+    "jwerle/libram": "0.2.0",
+    "jwerle/libok": "0.3.0"
+  }
 }
