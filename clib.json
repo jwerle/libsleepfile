@@ -1,0 +1,18 @@
+{
+  "name": "sleepfile",
+  "version": "0.0.0",
+  "description": "A C99 library for interacting with SLEEP file storage.",
+  "repo": "jwerle/libsleepfile",
+  "src": [
+    "include/sleepfile/platform.h",
+    "include/sleepfile/version.h",
+    "include/sleepfile/sleepfile.h",
+    "src/sleepfile.c",
+    "src/version.c",
+    "mk/brief.mk",
+    "Makefile.in",
+    "configure",
+    "README.md",
+    "LICENSE"
+  ]
+}
