@@ -1,66 +1,66 @@
-#include "ram/version.h"
+#include "sleepfile/version.h"
 
 #define SX(x) #x
 #define S(x) SX(x)
 
-#ifndef RAM_VERSION
-#define RAM_VERSION 0
+#ifndef SLEEPFILE_VERSION
+#define SLEEPFILE_VERSION 0
 #endif
 
-#ifndef RAM_NAME
-#define RAM_NAME "libram"
+#ifndef SLEEPFILE_NAME
+#define SLEEPFILE_NAME "libsleepfile"
 #endif
 
-#ifndef RAM_VERSION_MAJOR
-#define RAM_VERSION_MAJOR 0
+#ifndef SLEEPFILE_VERSION_MAJOR
+#define SLEEPFILE_VERSION_MAJOR 0
 #endif
 
-#ifndef RAM_VERSION_MINOR
-#define RAM_VERSION_MINOR 0
+#ifndef SLEEPFILE_VERSION_MINOR
+#define SLEEPFILE_VERSION_MINOR 0
 #endif
 
-#ifndef RAM_VERSION_PATCH
-#define RAM_VERSION_PATCH 0
+#ifndef SLEEPFILE_VERSION_PATCH
+#define SLEEPFILE_VERSION_PATCH 0
 #endif
 
-#ifndef RAM_VERSION_REVISION
-#define RAM_VERSION_REVISION 0
+#ifndef SLEEPFILE_VERSION_REVISION
+#define SLEEPFILE_VERSION_REVISION 0
 #endif
 
-#ifndef RAM_DATE_COMPILED
-#define RAM_DATE_COMPILED ""
+#ifndef SLEEPFILE_DATE_COMPILED
+#define SLEEPFILE_DATE_COMPILED ""
 #endif
 
 const char *
-ram_version_string() {
-  return RAM_NAME
-    "@" S(RAM_VERSION_MAJOR)
-    "." S(RAM_VERSION_MINOR)
-    "." S(RAM_VERSION_PATCH)
-    "." S(RAM_VERSION_REVISION) " (" RAM_DATE_COMPILED ")";
+sleepfile_version_string() {
+  return SLEEPFILE_NAME
+    "@" S(SLEEPFILE_VERSION_MAJOR)
+    "." S(SLEEPFILE_VERSION_MINOR)
+    "." S(SLEEPFILE_VERSION_PATCH)
+    "." S(SLEEPFILE_VERSION_REVISION) " (" SLEEPFILE_DATE_COMPILED ")";
 }
 
 const unsigned long int
-ram_version() {
-  return (const unsigned long int) RAM_VERSION;
+sleepfile_version() {
+  return (const unsigned long int) SLEEPFILE_VERSION;
 }
 
 const unsigned long int
-ram_version_major() {
-  return RAM_VERSION >> 24 & 0xff;
+sleepfile_version_major() {
+  return SLEEPFILE_VERSION >> 24 & 0xff;
 }
 
 const unsigned long int
-ram_version_minor() {
-  return RAM_VERSION >> 16 & 0xff;
+sleepfile_version_minor() {
+  return SLEEPFILE_VERSION >> 16 & 0xff;
 }
 
 const unsigned long int
-ram_version_patch() {
-  return RAM_VERSION >> 8 & 0xff;
+sleepfile_version_patch() {
+  return SLEEPFILE_VERSION >> 8 & 0xff;
 }
 
 const unsigned long int
-ram_version_revision() {
-  return RAM_VERSION & 0xff;
+sleepfile_version_revision() {
+  return SLEEPFILE_VERSION & 0xff;
 }

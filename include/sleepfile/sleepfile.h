@@ -4,6 +4,9 @@
 #include <nanoresource/nanoresource.h>
 #include <ras/ras.h>
 
+#include "platform.h"
+#include "version.h"
+
 typedef struct sleepfile sleepfile_t;
 typedef struct sleepfile_codec sleepfile_codec_t;
 typedef struct sleepfile_stats sleepfile_stats_t;
@@ -30,12 +33,19 @@ typedef void (sleepfile_stat_callback_t)(
   sleepfile_stats_t *stats);
 
 struct sleepfile_codec {
-  void *(*encode)(void *value, unsigned long int size);
-  void *(*decode)(void *buf, unsigned long int size, unsigned long int offset);
+  void *(*encode)(
+    void *value,
+    unsigned long int size,
+    unsigned long int index);
+
+  void *(*decode)(
+    void *buf,
+    unsigned long int size,
+    unsigned long int offset,
+    unsigned long int index);
 };
 
 struct sleepfile_options {
-  ras_storage_t *storage;
   sleepfile_codec_t value_codec;
   unsigned long int value_size;
   unsigned long int magic_bytes;
@@ -84,38 +94,38 @@ struct sleepfile_put_options {
   unsigned int encoded:1;
 };
 
-sleepfile_t *
+SLEEPFILE_EXPORT sleepfile_t *
 sleepfile_new(
   ras_storage_t *storage,
   sleepfile_options_t options);
 
-int
+SLEEPFILE_EXPORT int
 sleepfile_destroy(
   sleepfile_t *sleepfile,
   sleepfile_destroy_callback_t *callback);
 
-int
+SLEEPFILE_EXPORT int
 sleepfile_open(
   sleepfile_t *sleepfile,
   sleepfile_open_callback_t *callback);
 
-int
+SLEEPFILE_EXPORT int
 sleepfile_close(
   sleepfile_t *sleepfile,
   sleepfile_close_callback_t *callback);
 
-int
+SLEEPFILE_EXPORT int
 sleepfile_stat(
   sleepfile_t *sleepfile,
   sleepfile_stat_callback_t *callback);
 
-int
+SLEEPFILE_EXPORT int
 sleepfile_get(
   sleepfile_t *sleepfile,
   unsigned int index,
   sleepfile_get_callback_t *callback);
 
-int
+SLEEPFILE_EXPORT int
 sleepfile_put(
   sleepfile_t *sleepfile,
   unsigned int index,

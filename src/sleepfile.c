@@ -167,10 +167,12 @@ sleepfile_get_storage_read_request(
   sleepfile_t *sleepfile = request->storage->data;
   sleepfile_get_options_t *options = request->shared;
   sleepfile_get_callback_t *callback = 0;
+  unsigned int index = 0;
   void *enc = 0;
 
   if (0 != options) {
     callback = options->callback;
+    index = options->index;
     request->shared = 0;
     free(options);
     options = 0;
@@ -180,7 +182,8 @@ sleepfile_get_storage_read_request(
     enc = sleepfile->value_codec.decode(
       value,
       sleepfile->value_size,
-      0);
+      0,
+      index);
   }
 
   nanoresource_inactive((nanoresource_t *) sleepfile);
@@ -292,7 +295,8 @@ sleepfile_put_storage_open_request(
     options->encoded = 1;
     options->value = sleepfile->value_codec.encode(
       options->value,
-      sleepfile->value_size);
+      sleepfile->value_size,
+      options->index);
   }
 
   ras_storage_write_shared(

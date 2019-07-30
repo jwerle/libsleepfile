@@ -1,22 +1,22 @@
-#ifndef RAM_PLATFORM_H
-#define RAM_PLATFORM_H
+#ifndef SLEEPFILE_PLATFORM_H
+#define SLEEPFILE_PLATFORM_H
 
 #if defined(_WIN32)
-#  define RAM_EXPORT __declspec(dllimport)
+#  define SLEEPFILE_EXPORT __declspec(dllimport)
 #elif defined(__GNUC__) && (__GNUC__ * 100 + __GNUC_MINOR) >= 303
-#  define RAM_EXPORT __attribute__((visibility("default")))
-#  define RAM_INLINE inline
+#  define SLEEPFILE_EXPORT __attribute__((visibility("default")))
+#  define SLEEPFILE_INLINE inline
 #else
-#  define RAM_EXPORT
-#  define RAM_INLINE
+#  define SLEEPFILE_EXPORT
+#  define SLEEPFILE_INLINE
 #endif
 
-#ifndef RAM_ALIGNMENT
-#  define RAM_ALIGNMENT sizeof(unsigned long) // platform word
+#ifndef SLEEPFILE_ALIGNMENT
+#  define SLEEPFILE_ALIGNMENT sizeof(unsigned long) // platform word
 #endif
 
-#ifndef RAM_MAX_ENUM
-#  define RAM_MAX_ENUM 0x7FFFFFFF
+#ifndef SLEEPFILE_MAX_ENUM
+#  define SLEEPFILE_MAX_ENUM 0x7FFFFFFF
 #endif
 
 #endif

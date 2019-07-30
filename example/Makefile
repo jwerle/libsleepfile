@@ -6,8 +6,8 @@ BUILD_LIBRARY_PATH = $(CWD)/../build/lib
 DEPS += $(wildcard ../deps/*/*.c)
 
 ## source files
-TARGET =
-SOURCE += $(wildcard *.c) $(DEPS)
+TARGET = hypercore
+SOURCE += $(wildcard *.c)
 OBJECTS = $(SOURCE:.c=.o)
 
 LIBS = $(wildcard ../build/lib/*.a)
@@ -44,7 +44,7 @@ endif
 default: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	$(CC) $@.o $(wildcard ../src/*.c) $(CFLAGS) -o $@
+	$(CC) $@.o $(DEPS) $(wildcard ../src/*.c) $(CFLAGS) -o $@
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
