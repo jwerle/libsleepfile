@@ -50,7 +50,7 @@ declare -a OPTIONAL_COMMAND_DEPENDENCIES=()
 declare -a LIBRARY_DEPENDENCIES=( )
 
 ## Required system frameworks on macos
-declare -a LIBRARY_FSLEEPFILEEWORK_DEPENDENCIES=()
+declare -a LIBRARY_FRAMEWORK_DEPENDENCIES=()
 
 ## Optional system libraries
 declare -a OPTIONAL_LIBRARY_DEPENDENCIES=()
@@ -80,7 +80,7 @@ case $OS in
 
   darwin)
     HEADER_DEPENDENCIES+=('TargetConditionals.h')
-    LIBRARY_FSLEEPFILEEWORK_DEPENDENCIES+=('Foundation')
+    LIBRARY_FRAMEWORK_DEPENDENCIES+=('Foundation')
     SED_REGEX_FLAG="-E"
     ;;
 esac
@@ -430,7 +430,7 @@ function configure {
   done
 
   ## gcc/ld framework (macOS) flags
-  for framework in "${LIBRARY_FSLEEPFILEEWORK_DEPENDENCIES[@]}"; do
+  for framework in "${LIBRARY_FRAMEWORK_DEPENDENCIES[@]}"; do
     ldflag "-framework $framework"
   done
 
@@ -467,11 +467,11 @@ function configure {
     done
   fi
 
-  if (( ${#LIBRARY_FSLEEPFILEEWORK_DEPENDENCIES[@]} > 0 )); then
+  if (( ${#LIBRARY_FRAMEWORK_DEPENDENCIES[@]} > 0 )); then
     echo
     info "Checking required framework dependencies"
-    for (( i = 0; i < ${#LIBRARY_FSLEEPFILEEWORK_DEPENDENCIES[@]}; i++ )); do
-      local framework="${LIBRARY_FSLEEPFILEEWORK_DEPENDENCIES[$i]}"
+    for (( i = 0; i < ${#LIBRARY_FRAMEWORK_DEPENDENCIES[@]}; i++ )); do
+      local framework="${LIBRARY_FRAMEWORK_DEPENDENCIES[$i]}"
       if ! check_framework $framework; then
         fatal "Missing required framework $framework"
       fi
