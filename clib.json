@@ -1,6 +1,6 @@
 {
   "name": "sleepfile",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "A C99 library for interacting with SLEEP file storage.",
   "repo": "jwerle/libsleepfile",
   "src": [
