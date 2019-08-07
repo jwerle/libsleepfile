@@ -17,7 +17,7 @@
   ],
   "dependencies": {
     "jwerle/libnanoresource": "0.1.2",
-    "jwerle/libras": "0.3.7"
+    "jwerle/libras": "0.4.1"
   },
   "development": {
     "jwerle/libram": "0.2.0",
