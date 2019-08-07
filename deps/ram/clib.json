@@ -1,6 +1,6 @@
 {
   "name": "ram",
-  "version": "0.2.1",
+  "version": "0.2.0",
   "description": "A C99 library for creating random access memory interfaces.",
   "repo": "jwerle/libram",
   "src": [
@@ -19,6 +19,6 @@
     "jwerle/libras": "0.4.1"
   },
   "development": {
-    "jwerle/libok": "0.3.0"
+    "jwerle/libok": "0.2.0"
   }
 }

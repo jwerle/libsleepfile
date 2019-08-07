@@ -21,6 +21,7 @@
   },
   "development": {
     "jwerle/libram": "0.2.0",
-    "jwerle/libok": "0.3.0"
+    "jwerle/libok": "0.3.0",
+    "arablocks/flat-tree.c": "0.3.1"
   }
 }
