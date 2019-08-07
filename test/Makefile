@@ -15,6 +15,7 @@ CFLAGS += -Werror
 CFLAGS += -I ../build/include
 CFLAGS += -I ../deps
 CFLAGS += -L $(BUILD_LIBRARY_PATH)
+CFLAGS += -l:libsleepfile.a
 CFLAGS += -l m
 CFLAGS += -g
 
@@ -43,7 +44,7 @@ all: $(TARGETS)
   done
 
 $(TARGETS): $(SOURCES)
-	$(CC) -o $@ $(wildcard ../src/*.c) $@.c $(DEPS) $(CFLAGS) -D OK_EXPECTED=`cat *.c|grep 'ok('|wc -l`
+	$(CC) -o $@ $@.c $(DEPS) $(CFLAGS) -D OK_EXPECTED=`cat *.c|grep 'ok('|wc -l`
 
 .PHONY: clean
 clean:

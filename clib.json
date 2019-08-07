@@ -16,7 +16,7 @@
     "LICENSE"
   ],
   "dependencies": {
-    "jwerle/libnanoresource": "0.1.2",
+    "jwerle/libnanoresource": "0.2.0",
     "jwerle/libras": "0.4.1"
   },
   "development": {
